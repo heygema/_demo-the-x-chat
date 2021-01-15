@@ -17,6 +17,7 @@
   "dependencies": {
     "@prisma/cli": "^2.14.0",
     "@prisma/client": "^2.14.0",
+    "apollo-server-express": "^2.19.2",
     "express": "^4.17.1",
     "graphql-tag": "^2.11.0",
     "graphql-yoga": "^1.18.3",
