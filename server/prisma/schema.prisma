@@ -18,6 +18,8 @@ model User {
   friendships Friendship[]
 
   messages Message[]
+
+  createdAt DateTime @default(now()) @map(name: "created_at")
   @@map(name: "users")
 }
 
@@ -27,6 +29,8 @@ model Friendship {
   friendshipType FriendshipType
 
   messages Message[]
+
+  createdAt DateTime @default(now()) @map(name: "created_at")
   @@map(name: "friendships")
 }
 
@@ -46,5 +50,6 @@ model Message {
 
   content String
 
+  createdAt DateTime @default(now()) @map(name: "created_at")
   @@map(name: "messages")
 }
