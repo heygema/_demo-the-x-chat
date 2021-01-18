@@ -1,12 +1,10 @@
-import prisma from './prismaClient';
 import path from 'path';
 import express from 'express';
 import http from 'http';
 import {ApolloServer, gql} from 'apollo-server-express';
 import makeIO from 'socket.io';
 
-async function seed() {}
-seed();
+import prisma from './prismaClient';
 
 const typeDefs = gql`
   type Query {
@@ -34,7 +32,7 @@ const typeDefs = gql`
   }
 
   type Mutation {
-    createUser(email: String, name: String): String
+    createUser(email: String, name: String): User
   }
 `;
 
@@ -96,8 +94,7 @@ const resolvers = {
         },
       });
 
-      console.log('result ?', result);
-      return name;
+      return result;
     },
   },
 };
@@ -119,12 +116,42 @@ let server = http.createServer(app);
 const io = makeIO(server);
 
 io.on('connection', (socket: any) => {
-  console.log('someone in');
+  console.log(`someone ${socket.id} in`);
   socket.on('join-friend-room', (roomId: number) => {
-    console.log('joined room id ?', roomId);
-
+    socket.join(roomId);
     socket.emit('message', `Welcome ${socket.id}`);
   });
+
+  type MessageFromUser = {
+    senderId: string;
+    roomId: string;
+    content: string;
+  };
+
+  // for security purpose, get sender id from cached roomId on connectedsocket
+  socket.on(
+    'message-from-user',
+    async ({senderId, roomId, content}: MessageFromUser) => {
+      // persist to db here
+      let message = await prisma.message.create({
+        data: {
+          friendship: {
+            connect: {
+              id: roomId,
+            },
+          },
+          sender: {
+            connect: {
+              id: senderId,
+            },
+          },
+          content,
+        },
+      });
+
+      io.to(roomId).emit('message-from-server', message);
+    }
+  );
 });
 
 server.listen(4000, () => {
