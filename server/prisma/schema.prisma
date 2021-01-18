@@ -11,19 +11,40 @@ generator client {
 }
 
 model User {
-  id    String     @id @default(cuid())
+  id    String  @id @default(cuid())
   email String  @unique
   name  String?
+
+  friendships Friendship[]
+
+  messages Message[]
+  @@map(name: "users")
 }
 
-model Friend {
-  id    String     @id @default(cuid())
-  user1 User
+model Friendship {
+  id             String         @id @default(cuid())
+  users          User[]
+  friendshipType FriendshipType
 
+  messages Message[]
+  @@map(name: "friendships")
+}
+
+enum FriendshipType {
+  Group
+  Friend
 }
 
 model Message {
-  id    String     @id @default(cuid())
-  content String
-}
+  id String @id @default(cuid())
 
+  friendship Friendship @relation(fields: [friendshipId], references: [id])
+  sender     User       @relation(fields: [userId], references: [id])
+
+  friendshipId String
+  userId       String
+
+  content String
+
+  @@map(name: "messages")
+}
