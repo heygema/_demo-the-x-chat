@@ -108,6 +108,7 @@ const apolloServer = new ApolloServer({
   }),
 });
 let app = express();
+app.set('prisma', prisma);
 app.use(express.static(path.join(__dirname, '../public')));
 apolloServer.applyMiddleware({app});
 let server = http.createServer(app);
@@ -130,7 +131,7 @@ io.on('connection', (socket: any) => {
 
   // for security purpose, get sender id from cached roomId on connectedsocket
   socket.on(
-    'message-from-user',
+    'message-from-client',
     async ({senderId, roomId, content}: MessageFromUser) => {
       // persist to db here
       let message = await prisma.message.create({
