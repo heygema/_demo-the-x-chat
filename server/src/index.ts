@@ -1,17 +1,24 @@
-import path from 'path';
-import express from 'express';
-import http from 'http';
-import {ApolloServer, gql} from 'apollo-server-express';
-import makeIO from 'socket.io';
+import path from "path";
+import express from "express";
+import http from "http";
+import { ApolloServer, gql } from "apollo-server-express";
+import makeIO from "socket.io";
 
-import prisma from './prismaClient';
+import prisma from "./prismaClient";
 
 const typeDefs = gql`
   type Query {
     hello(name: String): String!
-    messages(roomId: String!): [String!]!
+    messages(roomId: String!): [Message!]!
     friends(email: String!): [Friendship!]!
     users: [User!]!
+  }
+
+  type Message {
+    id: String
+    sender: User
+    content: String
+    createdAt: String
   }
 
   type User {
@@ -38,65 +45,65 @@ const typeDefs = gql`
 
 const resolvers = {
   Query: {
-    hello: (_: any, {name}: any) => {
+    hello: (_: any, { name }: any) => {
       return `hello ${name}`;
     },
     users: () => {
       return prisma.user.findMany();
     },
-    friends: async (_: any, {email}: {email: string}) => {
+    friends: async (_: any, { email }: { email: string }) => {
       let friends = await prisma.friendship.findMany({
         where: {
-          friendshipType: 'Friend',
+          friendshipType: "Friend",
           users: {
-            some: {email},
-          },
+            some: { email }
+          }
         },
         include: {
           users: {
             where: {
               NOT: {
-                email,
-              },
-            },
-          },
-        },
+                email
+              }
+            }
+          }
+        }
       });
 
       return friends;
     },
-    messages: async (_: any, {roomId}: {roomId: string}) => {
+    messages: async (_: any, { roomId }: { roomId: string }) => {
       let friendship = await prisma.friendship.findUnique({
         where: {
-          id: roomId,
+          id: roomId
         },
         include: {
           messages: {
             include: {
-              sender: {},
-            },
-          },
-        },
+              sender: {}
+            }
+          }
+        }
       });
 
       return friendship?.messages;
-    },
+    }
   },
   Mutation: {
     createUser: async (
       _: any,
-      {email, name}: {email: string; name: string}
+      { email, name }: { email: string; name: string }
     ) => {
       let result = await prisma.user.create({
         data: {
           email,
-          name,
-        },
+          name
+        }
       });
 
       return result;
-    },
-  },
+    }
+  }
 };
 
 const apolloServer = new ApolloServer({
@@ -104,53 +111,55 @@ const apolloServer = new ApolloServer({
   resolvers,
   context: (contexts) => ({
     ...contexts,
-    prisma,
-  }),
+    prisma
+  })
 });
 let app = express();
-app.set('prisma', prisma);
-app.use(express.static(path.join(__dirname, '../public')));
-apolloServer.applyMiddleware({app});
+app.set("prisma", prisma);
+app.use(express.static(path.join(__dirname, "../public")));
+apolloServer.applyMiddleware({ app });
 let server = http.createServer(app);
 
 // @ts-ignore
 const io = makeIO(server);
 
-io.on('connection', (socket: any) => {
-  console.log(`someone ${socket.id} in`);
-  socket.on('join-friend-room', (roomId: number) => {
+io.on("connection", (socket: any) => {
+  socket.on("join-friend-room", (roomId: number) => {
     socket.join(roomId);
-    socket.emit('message', `Welcome ${socket.id}`);
+    socket.emit("message", `Welcome ${socket.id}`);
   });
 
   type MessageFromUser = {
-    senderId: string;
+    email: string;
     roomId: string;
     content: string;
   };
 
   // for security purpose, get sender id from cached roomId on connectedsocket
   socket.on(
-    'message-from-client',
-    async ({senderId, roomId, content}: MessageFromUser) => {
+    "message-from-client",
+    async ({ email, roomId, content }: MessageFromUser) => {
       // persist to db here
       let message = await prisma.message.create({
         data: {
           friendship: {
             connect: {
-              id: roomId,
-            },
+              id: roomId
+            }
           },
           sender: {
             connect: {
-              id: senderId,
-            },
+              email
+            }
           },
-          content,
+          content
         },
+        include: {
+          sender: {}
+        }
       });
 
-      io.to(roomId).emit('message-from-server', message);
+      io.to(roomId).emit("message-from-server", message);
     }
   );
 });
