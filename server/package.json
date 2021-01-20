@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "printf 'y' | yarn db:reset && yarn db:push && nodemon --watch 'src/**/*.ts' --exec 'ts-node' --files src/index.ts",
+    "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' --files src/index.ts",
+    "dev:clean": "printf 'y' | yarn db:reset && yarn db:push && nodemon --watch 'src/**/*.ts' --exec 'ts-node' --files src/index.ts",
     "watch-prisma": "nodemon --watch 'prisma/schema.prisma' --exec 'npx prisma generate'",
     "build": "tsc -p",
     "test": "echo \"Error: no test specified\" && exit 1",
